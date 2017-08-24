@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        *{padding: 0;margin: 0}
+        #bg{height: 480px;width: 320px;background: url("img/game_bg.jpg");position: relative}
+        #scoring{ position:absolute; font-weight:bold; font-size:16px; color:white; left:65px; top:13px;}
+        #countDown{ position:absolute; background:tomato; width:180px; height:16px; left: 63px;top: 66px;border-radius: 10px}
+        .wolf{width: 108px;height: 101px;position: absolute;}
+        #menu{ position:absolute; width:320px; text-align:center; left:0; top:200px;}
+        #start,#handle,#gameOver{ line-height:50px; font-size:30px; font-weight:bold; color:#F60; text-shadow:0 0 5px #FFFF00; display:block; text-decoration:none;}
+        #gameOver{ position:absolute; width:320px; text-align:center; top:200px; left:0; display:none;}
+    </style>
+</head>
+<body>
+    <div id="bg">
+        <div id="scoring">0</div><!--这是分数-->
+        <div id="countDown"></div><!--倒计时-->
+        <div id="menu">
+            <a href="#" id="start">开始</a>
+            <a href="#" id="handle">游戏操作说明</a>
+        </div>
+        <div id="gameOver">game over!</div>
+    </div>
+</body>
+</html>
+<script>
+    var arrPos = [//wolf出现的坐标
+        {left:"98px",top:"115px"},
+        {left:"17px",top:"160px"},
+        {left:"15px",top:"220px"},
+        {left:"30px",top:"293px"},
+        {left:"122px",top:"273px"},
+        {left:"207px",top:"295px"},
+        {left:"200px",top:"211px"},
+        {left:"187px",top:"141px"},
+        {left:"100px",top:"185px"}
+    ];
+    var oBox=document.getElementById("bg");
+    var start = document.getElementById('start');//开始按钮
+    var menu = document.getElementById('menu');//开始菜单
+    var countDown = document.getElementById('countDown');//血条
+
+    var countDownTimer;//倒计时定时器
+    var createWolfTimer;//产生wolf的定时器
+    var score = 0;//分数
+    var scoring = document.getElementById('scoring');//分数显示区
+    var gameOver = document.getElementById('gameOver');//游戏结束
+
+    // 点击开始按钮
+    start.onclick = function () {
+        //开始菜单消失
+        menu.style.display = 'none';
+        //倒计时
+        countDownFn();
+        // 产生wolf
+        createWolfTimer = setInterval(function () {
+            createWolf();
+        },100);
+    };
+
+    // 产生wolf
+    function createWolf() {
+        var wolf=document.createElement("img");//wolf图片
+        //添加类名
+        wolf.className="wolf";
+        // 小灰灰和灰太狼出现的概率
+        wolf.type = Math.random()>0.7 ? 'x':'h';
+        //记录下标
+        wolf.index = 0;
+        //对应的wolf的图片
+        wolf.src = 'img/'+wolf.type+wolf.index+'.png';
+        //wolf出现位置的随机数0-9
+        wolf.pos = parseInt(Math.random()*9);
+        // 添加属性，标记wolf是否被击打
+        wolf.beat = true;
+
+        if(isRepeated(wolf)){
+            return;
+        }
+        //对应位置数组随机的坐标
+        wolf.style.left = arrPos[wolf.pos].left;
+        wolf.style.top = arrPos[wolf.pos].top;
+        //wolf上升的方法
+        upFn(wolf);
+        //打击的方法
+        clickFn(wolf);
+        //创建wolf
+        oBox.appendChild(wolf);
+
+    }
+
+    // 排重
+    function isRepeated(obj) {
+        // 每生成一个新的wolf.pos,就要让其与已经存在的所有wolf的位置进行比较
+        var owolf = document.getElementsByTagName("img");
+        console.log(owolf.length);
+        for (var i=0; i<owolf.length; i++){
+            if (owolf[i].pos.left == obj.pos.left){
+                // 相等返回一个值，不等返回一个值
+                return true;
+            }
+        }
+        return false;
+    }
+    // click
+    function clickFn(obj) {
+        // 每生成一个wolf，就给它绑定一个点击事件
+        obj.onclick = function () {
+            // 防止连击wolf
+            if (!obj.beat){
+                return;
+            }
+            // 清除定时器
+            clearInterval(obj.upTimer);
+            clearInterval(obj.downTimer);
+            clearInterval(obj.clickTimer);
+            // 计分方法
+            scoreFn(obj);
+            //挨打效果图片
+            obj.index = 5;
+            obj.clickTimer = setInterval(function () {
+                obj.index++;
+                if (obj.index>9){
+                    clearInterval(obj.clickTimer);
+                    obj.remove();
+                    return;
+                }
+                obj.src = 'img/'+obj.type+obj.index+'.png';
+            },100);
+            obj.beat = !obj.beat;
+        }
+    }
+    // 上升方法
+    function upFn(obj) {
+        // 定时器作为wolf的属性以便找到对应定时器，用以防止冲突以便清除
+        obj.upTimer = setInterval(function () {
+            obj.index++;
+            if (obj.index>5){
+                clearInterval(obj.upTimer);
+               //下降的方法
+                downFn(obj);
+                return;
+            }
+            obj.src = 'img/'+obj.type+obj.index+'.png';
+        },100);
+    }
+    // 下降的方法
+    function downFn(obj) {
+        obj.downTimer = setInterval(function () {
+            obj.index--;
+            if (obj.index<0){
+                clearInterval(obj.downTimer);
+                obj.remove();
+                return;
+            }
+            obj.src = 'img/'+obj.type+obj.index+'.png';
+        },100);
+    }
+    // 计分
+    function scoreFn(obj) {
+        // 根据wolf不同，判断分值
+        if (obj.type == 'h'){
+            score += 10;
+        }else{
+            score -= 10;
+        }
+        //写入分数
+        scoring.innerHTML = score;
+    }
+    // 倒计时函数
+    function countDownFn() {
+        countDownTimer = setInterval(function () {
+            var w = countDown.offsetWidth;
+            w--;
+            if (w<0){
+                // 停止计时
+                clearInterval(countDownTimer);
+                // 停止产生wolf
+                clearInterval(createWolfTimer);
+                // gameover
+                gameOver.style.display = 'block';
+                return;
+            }
+            countDown.style.width = w+'px';
+        },100);
+    }
+
+</script>
